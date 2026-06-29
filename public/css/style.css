@@ -1,0 +1,385 @@
+/* IFL Site — shared styles */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --black:   #0d0d0f;
+  --dark:    #141417;
+  --panel:   #1c1c21;
+  --border:  #2a2a32;
+  --muted:   #55556a;
+  --text:    #e2e2ec;
+  --subtle:  #9090a8;
+  --white:   #ffffff;
+  --gold:    #f0b429;
+  --gold-dim:#9a7318;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --blue:    #60a5fa;
+  --radius:  6px;
+  --api:     https://api.ifl.indoorfootballindex.com;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── NAV ─────────────────────────────────────────────────────────────── */
+.site-nav {
+  background: var(--dark);
+  border-bottom: 2px solid var(--gold);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 54px;
+}
+
+.nav-brand {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--white);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  margin-right: 2rem;
+  flex-shrink: 0;
+}
+
+.nav-brand span { color: var(--gold); }
+
+.nav-links {
+  display: flex;
+  list-style: none;
+  gap: 0;
+  flex: 1;
+}
+
+.nav-links a {
+  display: block;
+  padding: 0 1rem;
+  height: 54px;
+  line-height: 54px;
+  color: var(--subtle);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.15s, background 0.15s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--white);
+  background: rgba(240,180,41,0.08);
+}
+
+.nav-links a.active {
+  border-bottom: 2px solid var(--gold);
+  margin-bottom: -2px;
+}
+
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--text);
+  margin-left: auto;
+}
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────── */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.page-header {
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+}
+
+.page-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--white);
+}
+
+.page-subtitle {
+  color: var(--subtle);
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
+/* ── FILTERS ─────────────────────────────────────────────────────────── */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.filter-select,
+.filter-input {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.83rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  min-width: 140px;
+}
+
+.filter-select:focus,
+.filter-input:focus { border-color: var(--gold); }
+
+.filter-input { min-width: 200px; }
+
+.btn {
+  background: var(--gold);
+  color: var(--black);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.45rem 1rem;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--subtle);
+}
+.btn-ghost:hover { border-color: var(--gold); color: var(--white); background: transparent; }
+
+/* ── TABLE ───────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+thead th {
+  background: var(--panel);
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 0.6rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+thead th:hover { color: var(--white); }
+
+thead th.sorted { color: var(--gold); }
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+
+tbody tr:hover { background: var(--panel); }
+
+tbody td {
+  padding: 0.6rem 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── STATUS BADGES ───────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-active   { background: rgba(34,197,94,0.15);  color: var(--green); }
+.badge-ir       { background: rgba(239,68,68,0.15);  color: var(--red); }
+.badge-exempt   { background: rgba(96,165,250,0.15); color: var(--blue); }
+.badge-rtr      { background: rgba(240,180,41,0.15); color: var(--gold); }
+.badge-sus      { background: rgba(239,68,68,0.2);   color: #fca5a5; }
+.badge-default  { background: var(--border);          color: var(--subtle); }
+
+/* transaction type badges */
+.badge-sign     { background: rgba(34,197,94,0.15);  color: var(--green); }
+.badge-release  { background: rgba(239,68,68,0.15);  color: var(--red); }
+
+/* ── SECTION HEADER (roster groups) ──────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.section-header h3 {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+.section-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+/* ── STANDINGS TABLE extras ──────────────────────────────────────────── */
+.conf-header {
+  background: var(--dark);
+  border-top: 2px solid var(--gold);
+}
+
+.conf-header td {
+  padding: 0.5rem 0.85rem;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+
+.col-header-group {
+  text-align: center;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--dark);
+  border-bottom: 1px solid var(--border);
+}
+
+.sos-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.sos-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  min-width: 60px;
+}
+
+.sos-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--gold);
+}
+
+/* ── LOADING / EMPTY ─────────────────────────────────────────────────── */
+.state-box {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--muted);
+}
+
+.state-box .icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.state-box p { font-size: 0.85rem; }
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── PAGINATION ──────────────────────────────────────────────────────── */
+.pagination {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.page-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--subtle);
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.page-btn:hover { border-color: var(--gold); color: var(--white); }
+.page-btn.active { background: var(--gold); color: var(--black); border-color: var(--gold); font-weight: 700; }
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .nav-links.open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 54px; left: 0; right: 0;
+    background: var(--dark);
+    border-bottom: 2px solid var(--gold);
+    z-index: 99;
+  }
+  .nav-links.open a { height: 48px; line-height: 48px; border-bottom: 1px solid var(--border); }
+  .nav-hamburger { display: block; }
+  .filters { gap: 0.5rem; }
+  .filter-select, .filter-input { min-width: 0; flex: 1; }
+  .page { padding: 1.25rem 0.75rem 3rem; }
+}

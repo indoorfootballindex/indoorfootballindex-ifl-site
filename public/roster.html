@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Roster — IFL Tracker</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    /* Position group sections */
+    .roster-team-section { margin-bottom: 2rem; }
+
+    .team-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .team-header h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--white);
+      letter-spacing: 0.02em;
+    }
+
+    .team-count {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .pos-group { margin-bottom: 0.15rem; }
+
+    .pos-group-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.4rem 0.85rem;
+      background: rgba(240,180,41,0.05);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pos-group-header h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+    }
+
+    .pos-group-header .cnt { color: var(--muted); font-size: 0.72rem; margin-left: auto; }
+
+    .roster-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .roster-table th {
+      background: var(--dark);
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.45rem 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .roster-table th:hover { color: var(--white); }
+    .roster-table th.sorted { color: var(--gold); }
+    .roster-table td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); }
+    .roster-table tr:hover { background: var(--panel); }
+    .roster-table tr:last-child td { border-bottom: none; }
+
+    .player-name { font-weight: 600; color: var(--white); }
+    .jersey { color: var(--muted); font-size: 0.78rem; }
+    .college-cell { color: var(--subtle); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .status-sections { margin-top: 1.5rem; }
+    .status-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.55rem 0.85rem;
+      background: var(--panel);
+      border-top: 2px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+    .status-section-header h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--subtle);
+    }
+
+    /* View toggle */
+    .view-toggle { display: flex; gap: 0.4rem; margin-left: auto; }
+    .view-btn {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--subtle);
+      border-radius: 4px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .view-btn.active { background: var(--gold); color: var(--black); border-color: var(--gold); font-weight: 700; }
+  </style>
+</head>
+<body data-page="roster">
+<script src="/js/shared.js"></script>
+
+<div class="page">
+  <div class="page-header">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <h1 class="page-title">IFL Rosters</h1>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnByTeam" onclick="setView('team')">By Team</button>
+        <button class="view-btn" id="btnByPos"  onclick="setView('pos')">By Position</button>
+        <button class="view-btn" id="btnAll"    onclick="setView('all')">All Players</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <select class="filter-select" id="filterTeam">
+      <option value="">All Teams</option>
+    </select>
+    <select class="filter-select" id="filterPos">
+      <option value="">All Positions</option>
+    </select>
+    <select class="filter-select" id="filterStatus">
+      <option value="">All Statuses</option>
+      <option value="Active">Active</option>
+      <option value="Short-Term IR">Short-Term IR</option>
+      <option value="Season IR">Season IR</option>
+      <option value="League IR">League IR</option>
+      <option value="RTR">RTR</option>
+      <option value="Exempt – CFL">Exempt – CFL</option>
+      <option value="Exempt – UFL">Exempt – UFL</option>
+      <option value="Exempt – NFL">Exempt – NFL</option>
+      <option value="Commissioners Exempt">Commissioners Exempt</option>
+      <option value="Suspended">Suspended</option>
+      <option value="PUP">PUP</option>
+    </select>
+    <input class="filter-input" id="filterSearch" type="text" placeholder="Search player name…"/>
+    <button class="btn" onclick="applyFilters()">Filter</button>
+    <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div id="rosterContent">
+    <div class="state-box"><div class="spinner"></div><p>Loading roster…</p></div>
+  </div>
+</div>
+
+<script>
+let allPlayers = [];
+let currentView = 'team';
+let teams = [];
+
+const STATUS_ORDER = [
+  'Active', 'RTR', 'PUP',
+  'Short-Term IR', 'Season IR', 'League IR',
+  'Exempt – CFL', 'Exempt – UFL', 'Exempt – NFL',
+  'Commissioners Exempt', 'Suspended',
+];
+
+const POS_ORDER = ['QB','RB','FB','WR','TE','OL','DL','LB','DB','K','P','LS','SNP'];
+
+function posSort(pos) {
+  const i = POS_ORDER.indexOf(pos);
+  return i === -1 ? 99 : i;
+}
+
+function statusGroup(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'active') return 0;
+  if (s === 'rtr') return 1;
+  if (s === 'pup') return 2;
+  if (s.includes('short') && s.includes('ir')) return 3;
+  if (s.includes('season ir')) return 4;
+  if (s.includes('league ir')) return 5;
+  if (s.includes('exempt')) return 6;
+  if (s.includes('commiss')) return 7;
+  if (s.includes('suspend')) return 8;
+  return 9;
+}
+
+function setView(v) {
+  currentView = v;
+  ['team','pos','all'].forEach(x => {
+    document.getElementById('btn' + (x === 'team' ? 'ByTeam' : x === 'pos' ? 'ByPos' : 'All'))
+      .classList.toggle('active', x === v);
+  });
+  renderRoster(filteredPlayers());
+}
+
+function filteredPlayers() {
+  const team   = document.getElementById('filterTeam').value;
+  const pos    = document.getElementById('filterPos').value;
+  const status = document.getElementById('filterStatus').value;
+  const q      = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+  return allPlayers.filter(p => {
+    if (team   && p.team_code !== team) return false;
+    if (pos    && p.position  !== pos)  return false;
+    if (status && p.status    !== status) return false;
+    if (q && !(p.first_name + ' ' + p.last_name).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+function applyFilters() { renderRoster(filteredPlayers()); }
+function clearFilters() {
+  ['filterTeam','filterPos','filterStatus'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterSearch').value = '';
+  renderRoster(allPlayers);
+}
+
+function playerRow(p) {
+  return `<tr>
+    <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey || '—'}</span></td>
+    <td>${p.position || '—'}</td>
+    <td>${p.height || '—'}</td>
+    <td>${p.weight ? p.weight + ' lbs' : '—'}</td>
+    <td>${p.level || '—'}</td>
+    <td class="college-cell" title="${p.college || ''}">${p.college || '—'}</td>
+    <td>${statusBadge(p.status)}</td>
+  </tr>`;
+}
+
+function tableHeader() {
+  return `<thead><tr>
+    <th>Name</th>
+    <th>Pos</th>
+    <th>Ht</th>
+    <th>Wt</th>
+    <th>Exp</th>
+    <th>College / Pro</th>
+    <th>Status</th>
+  </tr></thead>`;
+}
+
+function renderByTeam(players) {
+  const byTeam = {};
+  players.forEach(p => {
+    if (!byTeam[p.team_code]) byTeam[p.team_code] = { name: p.team_name, players: [] };
+    byTeam[p.team_code].players.push(p);
+  });
+
+  if (!Object.keys(byTeam).length) return emptyHtml();
+
+  let html = '';
+  Object.entries(byTeam).sort((a,b) => a[1].name.localeCompare(b[1].name)).forEach(([code, team]) => {
+    const sorted = [...team.players].sort((a,b) => {
+      const sg = statusGroup(a.status) - statusGroup(b.status);
+      if (sg !== 0) return sg;
+      return posSort(a.position) - posSort(b.position) || a.last_name.localeCompare(b.last_name);
+    });
+
+    html += `<div class="roster-team-section">
+      <div class="team-header">
+        <h2>${team.name}</h2>
+        <span class="team-count">${sorted.length} players</span>
+      </div>`;
+
+    // Group within team: Active/RTR first, then IR, then Exempt, then Suspended
+    const groups = {
+      'Active Roster': sorted.filter(p => ['active','rtr','pup'].includes((p.status||'').toLowerCase())),
+      'Injured Reserve': sorted.filter(p => (p.status||'').toLowerCase().includes('ir')),
+      'Exempt': sorted.filter(p => (p.status||'').toLowerCase().includes('exempt') || (p.status||'').toLowerCase().includes('commissioner')),
+      'Suspended': sorted.filter(p => (p.status||'').toLowerCase().includes('suspend')),
+    };
+
+    Object.entries(groups).forEach(([groupName, gplayers]) => {
+      if (!gplayers.length) return;
+      html += `<div class="pos-group">
+        <div class="pos-group-header">
+          <h3>${groupName}</h3>
+          <span class="cnt">${gplayers.length}</span>
+        </div>
+        <div class="table-wrap">
+          <table class="roster-table">${tableHeader()}<tbody>
+            ${gplayers.map(playerRow).join('')}
+          </tbody></table>
+        </div>
+      </div>`;
+    });
+
+    html += `</div>`;
+  });
+  return html;
+}
+
+function renderByPos(players) {
+  const byPos = {};
+  players.forEach(p => {
+    const pos = p.position || 'Other';
+    if (!byPos[pos]) byPos[pos] = [];
+    byPos[pos].push(p);
+  });
+
+  if (!Object.keys(byPos).length) return emptyHtml();
+
+  let html = '';
+  Object.keys(byPos).sort((a,b) => posSort(a) - posSort(b)).forEach(pos => {
+    const sorted = [...byPos[pos]].sort((a,b) => a.team_code.localeCompare(b.team_code) || a.last_name.localeCompare(b.last_name));
+    html += `<div class="pos-group">
+      <div class="pos-group-header">
+        <h3>${pos}</h3>
+        <span class="cnt">${sorted.length} players</span>
+      </div>
+      <div class="table-wrap">
+        <table class="roster-table">
+          <thead><tr>
+            <th>Name</th><th>Team</th><th>Ht</th><th>Wt</th><th>Exp</th><th>College / Pro</th><th>Status</th>
+          </tr></thead>
+          <tbody>
+            ${sorted.map(p => `<tr>
+              <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey||'—'}</span></td>
+              <td style="color:var(--gold);font-size:0.78rem;font-weight:700">${p.team_code}</td>
+              <td>${p.height||'—'}</td>
+              <td>${p.weight ? p.weight+' lbs' : '—'}</td>
+              <td>${p.level||'—'}</td>
+              <td class="college-cell" title="${p.college||''}">${p.college||'—'}</td>
+              <td>${statusBadge(p.status)}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+function renderAll(players) {
+  if (!players.length) return emptyHtml();
+  const sorted = [...players].sort((a,b) => a.last_name.localeCompare(b.last_name));
+  return `<div class="table-wrap"><table class="roster-table">
+    <thead><tr>
+      <th>Name</th><th>Team</th><th>Pos</th><th>Ht</th><th>Wt</th><th>Exp</th><th>College / Pro</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+      ${sorted.map(p => `<tr>
+        <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey||'—'}</span></td>
+        <td style="color:var(--gold);font-size:0.78rem;font-weight:700">${p.team_code}</td>
+        <td>${p.position||'—'}</td>
+        <td>${p.height||'—'}</td>
+        <td>${p.weight ? p.weight+' lbs' : '—'}</td>
+        <td>${p.level||'—'}</td>
+        <td class="college-cell" title="${p.college||''}">${p.college||'—'}</td>
+        <td>${statusBadge(p.status)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function emptyHtml() {
+  return `<div class="state-box"><div class="icon">🔍</div><p>No players match your filters.</p></div>`;
+}
+
+function renderRoster(players) {
+  const el = document.getElementById('rosterContent');
+  if (currentView === 'team') el.innerHTML = renderByTeam(players);
+  else if (currentView === 'pos') el.innerHTML = renderByPos(players);
+  else el.innerHTML = renderAll(players);
+}
+
+async function init() {
+  try {
+    const [players, meta] = await Promise.all([
+      apiFetch('/api/roster'),
+      apiFetch('/api/meta'),
+    ]);
+
+    allPlayers = players;
+
+    // Populate team filter
+    const teamCodes = [...new Set(players.map(p => p.team_code))].sort();
+    const teamNames = {};
+    players.forEach(p => { teamNames[p.team_code] = p.team_name; });
+    const teamSel = document.getElementById('filterTeam');
+    teamCodes.forEach(code => {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = teamNames[code] || code;
+      teamSel.appendChild(opt);
+    });
+
+    // Populate position filter
+    const posSel = document.getElementById('filterPos');
+    meta.positions.sort((a,b) => posSort(a) - posSort(b)).forEach(pos => {
+      const opt = document.createElement('option');
+      opt.value = pos; opt.textContent = pos;
+      posSel.appendChild(opt);
+    });
+
+    renderRoster(allPlayers);
+  } catch(e) {
+    document.getElementById('rosterContent').innerHTML =
+      `<div class="state-box"><p>Failed to load roster data.</p></div>`;
+    console.error(e);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

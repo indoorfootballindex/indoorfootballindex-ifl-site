@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transactions — IFL Tracker</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .trans-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    .trans-table th {
+      background: var(--panel);
+      color: var(--subtle);
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.55rem 0.85rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .trans-table th:hover { color: var(--white); }
+    .trans-table th.sorted { color: var(--gold); }
+    .trans-table td { padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--border); }
+    .trans-table tr:hover { background: var(--panel); }
+
+    .player-name { font-weight: 600; color: var(--white); }
+    .team-cell { color: var(--gold); font-size: 0.82rem; font-weight: 600; }
+    .college-cell { color: var(--subtle); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .date-cell { color: var(--muted); white-space: nowrap; font-size: 0.8rem; }
+
+    /* date dividers */
+    .date-divider td {
+      background: rgba(240,180,41,0.05);
+      padding: 0.35rem 0.85rem;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold-dim);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-count {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body data-page="transactions">
+<script src="/js/shared.js"></script>
+
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Transactions</h1>
+    <p class="page-subtitle">All IFL player moves — newest first</p>
+  </div>
+
+  <div class="filters">
+    <select class="filter-select" id="filterTeam">
+      <option value="">All Teams</option>
+    </select>
+    <select class="filter-select" id="filterType">
+      <option value="">All Types</option>
+      <option value="Sign">Sign</option>
+      <option value="Release">Release</option>
+      <option value="RTR">RTR</option>
+      <option value="Short-Term IR">Short-Term IR</option>
+      <option value="Season IR">Season IR</option>
+      <option value="Exempt – CFL">Exempt – CFL</option>
+      <option value="Exempt – UFL">Exempt – UFL</option>
+      <option value="Exempt – NFL">Exempt – NFL</option>
+      <option value="Suspended">Suspended</option>
+    </select>
+    <select class="filter-select" id="filterPos">
+      <option value="">All Positions</option>
+    </select>
+    <input class="filter-input" id="filterSearch" type="text" placeholder="Search player or team…"/>
+    <button class="btn" onclick="applyFilters()">Filter</button>
+    <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div class="result-count" id="resultCount"></div>
+
+  <div class="table-wrap">
+    <table class="trans-table" id="transTable">
+      <thead>
+        <tr>
+          <th data-col="trans_date">Date</th>
+          <th data-col="trans_type">Type</th>
+          <th data-col="last_name">Player</th>
+          <th data-col="position">Pos</th>
+          <th data-col="team_name">Team</th>
+          <th data-col="height">Ht</th>
+          <th data-col="weight">Wt</th>
+          <th data-col="level">Exp</th>
+          <th data-col="college">College / Pro</th>
+        </tr>
+      </thead>
+      <tbody id="transBody">
+        <tr><td colspan="9"><div class="state-box"><div class="spinner"></div></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+const PAGE_SIZE = 75;
+let allTrans = [];
+let filtered = [];
+let currentPage = 1;
+
+function applyFilters() {
+  const team   = document.getElementById('filterTeam').value;
+  const type   = document.getElementById('filterType').value;
+  const pos    = document.getElementById('filterPos').value;
+  const q      = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+  filtered = allTrans.filter(t => {
+    if (team && !t.team_name.toLowerCase().includes(team.toLowerCase())) return false;
+    if (type && t.trans_type !== type) return false;
+    if (pos  && t.position !== pos) return false;
+    if (q) {
+      const name = (t.first_name + ' ' + t.last_name).toLowerCase();
+      const tm   = (t.team_name || '').toLowerCase();
+      if (!name.includes(q) && !tm.includes(q)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  renderPage();
+}
+
+function clearFilters() {
+  ['filterTeam','filterType','filterPos'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterSearch').value = '';
+  filtered = [...allTrans];
+  currentPage = 1;
+  renderPage();
+}
+
+function renderPage() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page  = filtered.slice(start, start + PAGE_SIZE);
+  const body  = document.getElementById('transBody');
+
+  document.getElementById('resultCount').textContent =
+    `${filtered.length.toLocaleString()} transaction${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    body.innerHTML = `<tr><td colspan="9"><div class="state-box"><div class="icon">📋</div><p>No transactions match your filters.</p></div></td></tr>`;
+    renderPagination();
+    return;
+  }
+
+  let html = '';
+  let lastDate = null;
+
+  page.forEach(t => {
+    const dateStr = t.trans_date ? t.trans_date.slice(0,10) : null;
+    if (dateStr && dateStr !== lastDate) {
+      html += `<tr class="date-divider"><td colspan="9">${fmtDate(t.trans_date)}</td></tr>`;
+      lastDate = dateStr;
+    }
+    html += `<tr>
+      <td class="date-cell">${fmtDate(t.trans_date)}</td>
+      <td>${transBadge(t.trans_type)}</td>
+      <td><span class="player-name">${t.first_name} ${t.last_name}</span></td>
+      <td>${t.position || '—'}</td>
+      <td class="team-cell">${t.team_name || '—'}</td>
+      <td>${t.height || '—'}</td>
+      <td>${t.weight ? t.weight + ' lbs' : '—'}</td>
+      <td>${t.level || '—'}</td>
+      <td class="college-cell" title="${t.college||''}">${t.college || '—'}</td>
+    </tr>`;
+  });
+
+  body.innerHTML = html;
+  renderPagination();
+}
+
+function renderPagination() {
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}>← Prev</button>`;
+
+  const start = Math.max(1, currentPage - 2);
+  const end   = Math.min(totalPages, currentPage + 2);
+  if (start > 1) html += `<button class="page-btn" onclick="goPage(1)">1</button>${start>2?'<span style="color:var(--muted);padding:0 0.25rem">…</span>':''}`;
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  if (end < totalPages) html += `${end<totalPages-1?'<span style="color:var(--muted);padding:0 0.25rem">…</span>':''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+  html += `<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalPages?'disabled':''}>Next →</button>`;
+
+  pg.innerHTML = html;
+}
+
+function goPage(n) {
+  currentPage = n;
+  renderPage();
+  window.scrollTo(0, 0);
+}
+
+// Client-side sort
+function sortBy(col) {
+  const th = document.querySelector(`th[data-col="${col}"]`);
+  if (!th) return;
+  document.querySelectorAll('.trans-table th').forEach(t => t.classList.remove('sorted'));
+  th.classList.add('sorted');
+  const dir = th.dataset.dir === 'asc' ? -1 : 1;
+  th.dataset.dir = dir === 1 ? 'asc' : 'desc';
+  filtered.sort((a,b) => {
+    const av = a[col] ?? '', bv = b[col] ?? '';
+    return av.toString().localeCompare(bv.toString()) * dir;
+  });
+  currentPage = 1;
+  renderPage();
+}
+
+// Make headers clickable
+document.querySelectorAll('.trans-table th[data-col]').forEach(th => {
+  th.addEventListener('click', () => sortBy(th.dataset.col));
+});
+
+async function init() {
+  try {
+    const [data, teamsData, meta] = await Promise.all([
+      apiFetch('/api/transactions?limit=2000'),
+      apiFetch('/api/teams'),
+      apiFetch('/api/meta'),
+    ]);
+
+    allTrans = data.transactions || [];
+    filtered = [...allTrans];
+
+    // Team filter
+    const teamSel = document.getElementById('filterTeam');
+    teamsData.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.team_name; opt.textContent = t.team_name;
+      teamSel.appendChild(opt);
+    });
+
+    // Position filter
+    const posSel = document.getElementById('filterPos');
+    (meta.positions || []).forEach(pos => {
+      const opt = document.createElement('option');
+      opt.value = pos; opt.textContent = pos;
+      posSel.appendChild(opt);
+    });
+
+    renderPage();
+  } catch(e) {
+    document.getElementById('transBody').innerHTML =
+      `<tr><td colspan="9"><div class="state-box"><p>Failed to load transactions.</p></div></td></tr>`;
+    console.error(e);
+  }
+}
+
+init();
+</script>
+</body>
+</html>

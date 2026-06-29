@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Upload — IFL Tracker</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.5rem; }
+    @media (max-width: 700px) { .admin-grid { grid-template-columns: 1fr; } }
+
+    .upload-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .upload-card h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--white);
+      margin-bottom: 0.35rem;
+    }
+
+    .upload-card p {
+      color: var(--subtle);
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .file-drop {
+      border: 2px dashed var(--border);
+      border-radius: 6px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .file-drop:hover, .file-drop.drag { border-color: var(--gold); background: rgba(240,180,41,0.04); }
+    .file-drop input { display: none; }
+    .file-drop .drop-icon { font-size: 1.75rem; margin-bottom: 0.4rem; }
+    .file-drop .drop-label { font-size: 0.8rem; color: var(--subtle); }
+    .file-drop .drop-label span { color: var(--gold); }
+    .file-name { font-size: 0.78rem; color: var(--text); margin-top: 0.35rem; }
+
+    .upload-btn {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: var(--gold);
+      color: var(--black);
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .upload-btn:hover { opacity: 0.85; }
+    .upload-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .upload-result {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.85rem;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      display: none;
+    }
+    .upload-result.ok  { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.2); }
+    .upload-result.err { background: rgba(239,68,68,0.12);  color: var(--red);   border: 1px solid rgba(239,68,68,0.2); }
+
+    .auth-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .auth-section label { font-size: 0.82rem; color: var(--subtle); flex-shrink: 0; }
+    .auth-section input {
+      flex: 1;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.83rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .auth-section input:focus { border-color: var(--gold); }
+
+    .log-box {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      color: var(--subtle);
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 1.25rem;
+      white-space: pre-wrap;
+    }
+
+    .schema-note {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.85rem 1rem;
+      margin-top: 1.5rem;
+    }
+    .schema-note h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 0.6rem;
+    }
+    .schema-note code {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text);
+      line-height: 1.8;
+    }
+    .col { color: var(--gold); }
+  </style>
+</head>
+<body data-page="admin">
+<script src="/js/shared.js"></script>
+
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Admin Upload</h1>
+    <p class="page-subtitle">Upload weekly roster and transaction files. Roster replaces all data; transactions append.</p>
+  </div>
+
+  <div class="auth-section">
+    <label>Admin Secret</label>
+    <input type="password" id="adminSecret" placeholder="Enter your ADMIN_SECRET…"/>
+  </div>
+
+  <div class="admin-grid">
+    <!-- Roster Upload -->
+    <div class="upload-card">
+      <h2>📋 Roster File</h2>
+      <p>Upload the Official IFL Roster Database .xlsx file. This <strong>replaces all current roster data</strong>. Reads the Master sheet.</p>
+      <div class="file-drop" id="rosterDrop" onclick="document.getElementById('rosterFile').click()">
+        <input type="file" id="rosterFile" accept=".xlsx,.xls" onchange="handleFile(this,'roster')"/>
+        <div class="drop-icon">📂</div>
+        <div class="drop-label">Click to browse or <span>drag &amp; drop</span></div>
+        <div class="file-name" id="rosterFileName">No file selected</div>
+      </div>
+      <button class="upload-btn" id="rosterBtn" onclick="upload('roster')" disabled>Upload Roster</button>
+      <div class="upload-result" id="rosterResult"></div>
+    </div>
+
+    <!-- Transactions Upload -->
+    <div class="upload-card">
+      <h2>🔄 Transactions File</h2>
+      <p>Upload a dated transactions .xls/.xlsx file. This <strong>appends to existing transactions</strong> (duplicates are ignored by date + player + type).</p>
+      <div class="file-drop" id="transDrop" onclick="document.getElementById('transFile').click()">
+        <input type="file" id="transFile" accept=".xlsx,.xls" onchange="handleFile(this,'trans')"/>
+        <div class="drop-icon">📂</div>
+        <div class="drop-label">Click to browse or <span>drag &amp; drop</span></div>
+        <div class="file-name" id="transFileName">No file selected</div>
+      </div>
+      <button class="upload-btn" id="transBtn" onclick="upload('trans')" disabled>Upload Transactions</button>
+      <div class="upload-result" id="transResult"></div>
+    </div>
+
+    <!-- Standings Upload -->
+    <div class="upload-card">
+      <h2>🏆 Standings File</h2>
+      <p>Upload a standings CSV/TSV. This <strong>replaces all standings data</strong>. Required columns shown below.</p>
+      <div class="file-drop" id="standDrop" onclick="document.getElementById('standFile').click()">
+        <input type="file" id="standFile" accept=".csv,.tsv,.xlsx" onchange="handleFile(this,'stand')"/>
+        <div class="drop-icon">📂</div>
+        <div class="drop-label">Click to browse or <span>drag &amp; drop</span></div>
+        <div class="file-name" id="standFileName">No file selected</div>
+      </div>
+      <button class="upload-btn" id="standBtn" onclick="upload('stand')" disabled>Upload Standings</button>
+      <div class="upload-result" id="standResult"></div>
+    </div>
+  </div>
+
+  <div class="log-box" id="logBox">Ready. Select files above to upload.\n</div>
+
+  <div class="schema-note">
+    <h3>Standings CSV Format</h3>
+    <code>
+<span class="col">team_code</span>	<span class="col">team_name</span>	<span class="col">conference</span>	<span class="col">gp</span>	<span class="col">wins</span>	<span class="col">losses</span>	<span class="col">win_pct</span>	<span class="col">conf_gp</span>	<span class="col">conf_wins</span>	<span class="col">conf_losses</span>	<span class="col">conf_pct</span>	<span class="col">sos</span>	<span class="col">clinched</span>
+AZ	Arizona Rattlers	Western	13	8	5	0.615	10	7	3	0.700	0.481	X
+GB	Green Bay Blizzard	Eastern	13	11	2	0.846	11	9	2	0.818	0.503	X
+    </code>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const files = { roster: null, trans: null, stand: null };
+
+function log(msg) {
+  const box = document.getElementById('logBox');
+  box.textContent += new Date().toLocaleTimeString() + ' — ' + msg + '\n';
+  box.scrollTop = box.scrollHeight;
+}
+
+function handleFile(input, type) {
+  const file = input.files[0];
+  if (!file) return;
+  files[type] = file;
+  document.getElementById(type === 'roster' ? 'rosterFileName' : type === 'trans' ? 'transFileName' : 'standFileName').textContent = file.name;
+  document.getElementById(type === 'roster' ? 'rosterBtn' : type === 'trans' ? 'transBtn' : 'standBtn').disabled = false;
+  log(`Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+}
+
+// Drag and drop
+['rosterDrop','transDrop','standDrop'].forEach((id, i) => {
+  const type = ['roster','trans','stand'][i];
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('drag');
+    const fileInput = document.getElementById(['rosterFile','transFile','standFile'][i]);
+    const dt = new DataTransfer();
+    dt.items.add(e.dataTransfer.files[0]);
+    fileInput.files = dt.files;
+    handleFile(fileInput, type);
+  });
+});
+
+function parseRoster(wb) {
+  // Use Master sheet
+  const ws = wb.Sheets['Master'];
+  if (!ws) throw new Error('No Master sheet found');
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  const result = [];
+  rows.forEach(row => {
+    const teamCode = (row[0] || '').toString().trim();
+    if (!teamCode || teamCode === 'OFFICIAL IFL ROSTERS') return;
+    result.push({
+      team_code:  teamCode,
+      last_name:  (row[1] || '').toString().trim(),
+      first_name: (row[2] || '').toString().trim(),
+      position:   (row[4] || '').toString().trim(),
+      height:     (row[5] || '').toString().trim(),
+      weight:     (row[6] || '').toString().trim(),
+      college:    (row[7] || '').toString().trim(),
+      level:      (row[8] || '').toString().trim(),
+      status:     (row[9] || '').toString().trim(),
+    });
+  });
+  return result.filter(r => r.last_name);
+}
+
+function parseTrans(wb) {
+  const ws = wb.Sheets['Sheet1'];
+  if (!ws) throw new Error('No Sheet1 found');
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  // Find header row
+  let headerIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].some(c => c.toString().toLowerCase().includes('last name') || c.toString().toLowerCase().includes('team name'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const result = [];
+  const dataRows = headerIdx >= 0 ? rows.slice(headerIdx + 1) : rows.slice(1);
+
+  dataRows.forEach(row => {
+    const team = (row[0] || '').toString().trim();
+    if (!team || team.toLowerCase().includes('transaction')) return;
+    const dateRaw = row[10];
+    let dateStr = '';
+    if (dateRaw) {
+      if (typeof dateRaw === 'number') {
+        // Excel serial date
+        const d = new Date((dateRaw - 25569) * 86400 * 1000);
+        dateStr = d.toISOString().slice(0,10);
+      } else {
+        dateStr = dateRaw.toString().slice(0,10);
+      }
+    }
+    result.push({
+      team_name:  team,
+      last_name:  (row[1] || '').toString().trim(),
+      first_name: (row[2] || '').toString().trim(),
+      jersey:     (row[3] || '').toString().trim(),
+      position:   (row[4] || '').toString().trim(),
+      height:     (row[5] || '').toString().trim(),
+      weight:     (row[6] || '').toString().trim(),
+      college:    (row[7] || '').toString().trim(),
+      level:      (row[8] || '').toString().trim(),
+      trans_type: (row[9] || '').toString().trim(),
+      trans_date: dateStr,
+    });
+  });
+  return result.filter(r => r.last_name && r.team_name);
+}
+
+function parseStandings(wb) {
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  return rows.map(r => ({
+    team_code:    (r.team_code || '').toString().trim(),
+    team_name:    (r.team_name || '').toString().trim(),
+    conference:   (r.conference || '').toString().trim(),
+    gp:           r.gp,
+    wins:         r.wins,
+    losses:       r.losses,
+    win_pct:      r.win_pct,
+    conf_gp:      r.conf_gp,
+    conf_wins:    r.conf_wins,
+    conf_losses:  r.conf_losses,
+    conf_pct:     r.conf_pct,
+    sos:          r.sos,
+    clinched:     (r.clinched || '').toString().trim(),
+  })).filter(r => r.team_code);
+}
+
+async function upload(type) {
+  const secret = document.getElementById('adminSecret').value.trim();
+  if (!secret) { alert('Enter your Admin Secret first.'); return; }
+
+  const file = files[type];
+  if (!file) { alert('No file selected.'); return; }
+
+  const btnId    = type === 'roster' ? 'rosterBtn' : type === 'trans' ? 'transBtn' : 'standBtn';
+  const resultId = type === 'roster' ? 'rosterResult' : type === 'trans' ? 'transResult' : 'standResult';
+  const endpoint = type === 'roster' ? '/api/admin/upload/roster' :
+                   type === 'trans'  ? '/api/admin/upload/transactions' : '/api/admin/upload/standings';
+
+  const btn    = document.getElementById(btnId);
+  const result = document.getElementById(resultId);
+
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+  result.style.display = 'none';
+  log(`Reading ${file.name}…`);
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
+
+    let rows;
+    if (type === 'roster')  rows = parseRoster(wb);
+    else if (type === 'trans') rows = parseTrans(wb);
+    else rows = parseStandings(wb);
+
+    log(`Parsed ${rows.length} rows. Uploading…`);
+
+    const res = await fetch(API + endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${secret}`,
+      },
+      body: JSON.stringify(rows),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      result.className = 'upload-result ok';
+      result.textContent = `✓ Uploaded ${data.count} records successfully.`;
+      result.style.display = 'block';
+      log(`Done! ${data.count} records uploaded.`);
+    } else {
+      throw new Error(data.error || 'Upload failed');
+    }
+  } catch(e) {
+    result.className = 'upload-result err';
+    result.textContent = `✗ Error: ${e.message}`;
+    result.style.display = 'block';
+    log(`Error: ${e.message}`);
+  } finally {
+    btn.textContent = type === 'roster' ? 'Upload Roster' : type === 'trans' ? 'Upload Transactions' : 'Upload Standings';
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Standings — IFL Tracker</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .standings-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+
+    .standings-table th {
+      background: var(--panel);
+      color: var(--subtle);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.55rem 0.85rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .standings-table th:first-child { text-align: left; }
+    .standings-table th:hover { color: var(--white); }
+    .standings-table th.sorted { color: var(--gold); }
+
+    .standings-table td {
+      padding: 0.6rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      color: var(--subtle);
+    }
+    .standings-table td:first-child { text-align: left; }
+    .standings-table tr:hover { background: var(--panel); }
+
+    .team-cell { display: flex; align-items: center; gap: 0.6rem; }
+    .team-logo { width: 24px; height: 24px; border-radius: 3px; object-fit: contain; }
+    .team-name-cell { font-weight: 600; color: var(--white); }
+
+    .conf-row td {
+      padding: 0.5rem 0.85rem;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--white);
+      background: var(--dark);
+      border-top: 2px solid var(--gold);
+      border-bottom: 1px solid var(--border);
+      text-align: left !important;
+    }
+
+    .group-header-row td {
+      background: rgba(240,180,41,0.04);
+      color: var(--muted);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 0.3rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .group-header-row td:first-child { text-align: left; }
+
+    .pct-cell { font-weight: 700; color: var(--text); }
+    .clinch { font-size: 0.7rem; color: var(--gold); margin-left: 0.3rem; font-weight: 600; }
+
+    .sos-cell { white-space: nowrap; }
+    .sos-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
+    .sos-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; min-width: 50px; }
+    .sos-fill { height: 100%; border-radius: 2px; background: var(--gold-dim); }
+    .sos-num { font-size: 0.78rem; color: var(--subtle); min-width: 38px; }
+
+    .tiebreak-note {
+      margin-top: 1.25rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem 1.25rem;
+    }
+    .tiebreak-note h3 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 0.5rem;
+    }
+    .tiebreak-note ol {
+      padding-left: 1.2rem;
+      color: var(--subtle);
+      font-size: 0.82rem;
+      line-height: 1.9;
+    }
+    .tiebreak-note ol li strong { color: var(--text); }
+
+    .legend {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      font-size: 0.78rem;
+      color: var(--subtle);
+    }
+    .legend span { color: var(--gold); font-weight: 700; margin-right: 0.25rem; }
+  </style>
+</head>
+<body data-page="standings">
+<script src="/js/shared.js"></script>
+
+<div class="page">
+  <div class="page-header">
+    <h1 class="page-title">Team Standings</h1>
+    <p class="page-subtitle">2026 IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%</p>
+  </div>
+
+  <div class="legend">
+    <div><span>X</span> Clinched Playoff</div>
+    <div><span>E</span> Eliminated</div>
+    <div><span>SOS</span> Strength of Schedule (opponents' combined win%)</div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="standings-table" id="standingsTable">
+      <tbody id="standingsBody">
+        <tr><td colspan="11" class="state-box"><div class="spinner"></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tiebreak-note">
+    <h3>Tiebreaker Procedure</h3>
+    <ol>
+      <li><strong>Overall Record</strong> — Win percentage (W / GP)</li>
+      <li><strong>Head-to-Head</strong> — Win percentage in games between tied teams</li>
+      <li><strong>Strength of Schedule</strong> — Combined win percentage of all opponents faced</li>
+      <li><strong>Conference Win%</strong> — Win percentage in conference games only</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+async function loadStandings() {
+  const body = document.getElementById('standingsBody');
+  try {
+    const standings = await apiFetch('/api/standings');
+    if (!standings.length) {
+      body.innerHTML = '<tr><td colspan="11"><div class="state-box"><div class="icon">📋</div><p>No standings data yet.</p></div></td></tr>';
+      return;
+    }
+
+    // Group by conference
+    const byConf = {};
+    standings.forEach(s => {
+      if (!byConf[s.conference]) byConf[s.conference] = [];
+      byConf[s.conference].push(s);
+    });
+
+    // Find SOS range for bar scaling
+    const allSos = standings.map(s => +s.sos).filter(Boolean);
+    const sosMin = Math.min(...allSos) || 0;
+    const sosMax = Math.max(...allSos) || 1;
+
+    let html = '';
+
+    // Column header row (once)
+    html += `<tr>
+      <th data-col="team_name" style="text-align:left">Team</th>
+      <th data-col="gp">GP</th>
+      <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— OVERALL —</th>
+      <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— CONFERENCE —</th>
+      <th data-col="sos">SOS</th>
+    </tr>
+    <tr class="group-header-row">
+      <td></td><td></td>
+      <td>W</td><td>L</td><td>PCT</td>
+      <td>W</td><td>L</td><td>PCT</td>
+      <td></td>
+    </tr>`;
+
+    Object.entries(byConf).forEach(([conf, teams]) => {
+      html += `<tr class="conf-row"><td colspan="9">${conf}</td></tr>`;
+      teams.forEach(t => {
+        const clinch = t.clinched ? `<span class="clinch">${t.clinched}</span>` : '';
+        const sosPct = sosMax > sosMin ? ((+t.sos - sosMin) / (sosMax - sosMin)) * 100 : 50;
+        html += `<tr>
+          <td>
+            <div class="team-cell">
+              <span class="team-name-cell">${t.team_name}${clinch}</span>
+            </div>
+          </td>
+          <td>${t.gp}</td>
+          <td>${t.wins}</td>
+          <td>${t.losses}</td>
+          <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
+          <td>${t.conf_wins}</td>
+          <td>${t.conf_losses}</td>
+          <td class="pct-cell">${(+t.conf_pct).toFixed(3)}</td>
+          <td class="sos-cell">
+            <div class="sos-bar-wrap">
+              <div class="sos-track"><div class="sos-fill" style="width:${sosPct.toFixed(1)}%"></div></div>
+              <span class="sos-num">${(+t.sos).toFixed(3)}</span>
+            </div>
+          </td>
+        </tr>`;
+      });
+    });
+
+    body.innerHTML = html;
+  } catch (e) {
+    body.innerHTML = `<tr><td colspan="9"><div class="state-box"><p>Failed to load standings.</p></div></td></tr>`;
+    console.error(e);
+  }
+}
+
+loadStandings();
+</script>
+</body>
+</html>
