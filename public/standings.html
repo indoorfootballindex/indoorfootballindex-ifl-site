@@ -147,7 +147,7 @@
     </div>
   </div>
 
-  <div class="legend">
+  <div class="legend" id="legendBox">
     <div><span>X</span> Clinched Playoff</div>
     <div><span>E</span> Eliminated</div>
     <div><span>SOS</span> Strength of Schedule (opponents' combined win%)</div>
@@ -161,7 +161,7 @@
     </table>
   </div>
 
-  <div class="tiebreak-note">
+  <div class="tiebreak-note" id="tiebreakNote">
     <h3>Tiebreaker Procedure</h3>
     <ol>
       <li><strong>Overall Record</strong> — Win percentage (W / GP)</li>
@@ -200,8 +200,12 @@ function populateSeasonDropdown(availableSeasons) {
 async function loadStandings() {
   const body = document.getElementById('standingsBody');
   body.innerHTML = `<tr><td colspan="9" class="state-box"><div class="spinner"></div></td></tr>`;
-  document.getElementById('pageSubtitle').textContent =
-    `${activeSeason} IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%`;
+  document.getElementById('pageSubtitle').textContent = activeSeason === CURRENT_SEASON
+    ? `${activeSeason} IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%`
+    : `${activeSeason} IFL Season · Final Standings`;
+
+  document.getElementById('tiebreakNote').style.display = activeSeason === CURRENT_SEASON ? '' : 'none';
+  document.getElementById('legendBox').style.display = activeSeason === CURRENT_SEASON ? '' : 'none';
 
   try {
     const standings = await apiFetch(`/api/standings?season=${activeSeason}`);
@@ -217,55 +221,78 @@ async function loadStandings() {
       byConf[s.conference].push(s);
     });
 
-    // Find SOS range for bar scaling
-    const allSos = standings.map(s => +s.sos).filter(Boolean);
-    const sosMin = Math.min(...allSos) || 0;
-    const sosMax = Math.max(...allSos) || 1;
+    // Determine if this season has meaningful conference-record / SOS data
+    const hasExtendedStats = standings.some(s => +s.sos > 0 || +s.conf_gp > 0);
 
     let html = '';
 
-    // Column header row (once)
-    html += `<tr>
-      <th data-col="team_name" style="text-align:left">Team</th>
-      <th data-col="gp">GP</th>
-      <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— OVERALL —</th>
-      <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— CONFERENCE —</th>
-      <th data-col="sos">SOS</th>
-    </tr>
-    <tr class="group-header-row">
-      <td></td><td></td>
-      <td>W</td><td>L</td><td>PCT</td>
-      <td>W</td><td>L</td><td>PCT</td>
-      <td></td>
-    </tr>`;
+    if (hasExtendedStats) {
+      const allSos = standings.map(s => +s.sos).filter(Boolean);
+      const sosMin = Math.min(...allSos) || 0;
+      const sosMax = Math.max(...allSos) || 1;
 
-    Object.entries(byConf).forEach(([conf, teams]) => {
-      html += `<tr class="conf-row"><td colspan="9">${conf}</td></tr>`;
-      teams.forEach(t => {
-        const clinch = t.clinched ? `<span class="clinch">${t.clinched}</span>` : '';
-        const sosPct = sosMax > sosMin ? ((+t.sos - sosMin) / (sosMax - sosMin)) * 100 : 50;
-        html += `<tr>
-          <td>
-            <div class="team-cell">
-              <span class="team-name-cell">${t.team_name}${clinch}</span>
-            </div>
-          </td>
-          <td>${t.gp}</td>
-          <td>${t.wins}</td>
-          <td>${t.losses}</td>
-          <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
-          <td>${t.conf_wins}</td>
-          <td>${t.conf_losses}</td>
-          <td class="pct-cell">${(+t.conf_pct).toFixed(3)}</td>
-          <td class="sos-cell">
-            <div class="sos-bar-wrap">
-              <div class="sos-track"><div class="sos-fill" style="width:${sosPct.toFixed(1)}%"></div></div>
-              <span class="sos-num">${(+t.sos).toFixed(3)}</span>
-            </div>
-          </td>
-        </tr>`;
+      html += `<tr>
+        <th data-col="team_name" style="text-align:left">Team</th>
+        <th data-col="gp">GP</th>
+        <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— OVERALL —</th>
+        <th colspan="3" style="text-align:center;color:var(--subtle);font-size:0.65rem;letter-spacing:0.06em">— CONFERENCE —</th>
+        <th data-col="sos">SOS</th>
+      </tr>
+      <tr class="group-header-row">
+        <td></td><td></td>
+        <td>W</td><td>L</td><td>PCT</td>
+        <td>W</td><td>L</td><td>PCT</td>
+        <td></td>
+      </tr>`;
+
+      Object.entries(byConf).forEach(([conf, teams]) => {
+        html += `<tr class="conf-row"><td colspan="9">${conf}</td></tr>`;
+        teams.forEach(t => {
+          const clinch = t.clinched ? `<span class="clinch">${t.clinched}</span>` : '';
+          const sosPct = sosMax > sosMin ? ((+t.sos - sosMin) / (sosMax - sosMin)) * 100 : 50;
+          html += `<tr>
+            <td><div class="team-cell"><span class="team-name-cell">${t.team_name}${clinch}</span></div></td>
+            <td>${t.gp}</td>
+            <td>${t.wins}</td>
+            <td>${t.losses}</td>
+            <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
+            <td>${t.conf_wins}</td>
+            <td>${t.conf_losses}</td>
+            <td class="pct-cell">${(+t.conf_pct).toFixed(3)}</td>
+            <td class="sos-cell">
+              <div class="sos-bar-wrap">
+                <div class="sos-track"><div class="sos-fill" style="width:${sosPct.toFixed(1)}%"></div></div>
+                <span class="sos-num">${(+t.sos).toFixed(3)}</span>
+              </div>
+            </td>
+          </tr>`;
+        });
       });
-    });
+    } else {
+      // Simplified historical view: just overall record
+      html += `<tr>
+        <th data-col="team_name" style="text-align:left">Team</th>
+        <th data-col="gp">GP</th>
+        <th data-col="wins">W</th>
+        <th data-col="losses">L</th>
+        <th data-col="win_pct">PCT</th>
+      </tr>`;
+
+      Object.entries(byConf).forEach(([conf, teams]) => {
+        if (conf && conf !== 'IFL') {
+          html += `<tr class="conf-row"><td colspan="5">${conf}</td></tr>`;
+        }
+        teams.forEach(t => {
+          html += `<tr>
+            <td><div class="team-cell"><span class="team-name-cell">${t.team_name}</span></div></td>
+            <td>${t.gp}</td>
+            <td>${t.wins}</td>
+            <td>${t.losses}</td>
+            <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
+          </tr>`;
+        });
+      });
+    }
 
     body.innerHTML = html;
   } catch (e) {
