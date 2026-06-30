@@ -199,7 +199,6 @@ function populateSeasonDropdown(availableSeasons) {
 
 async function loadStandings() {
   const body = document.getElementById('standingsBody');
-  loading(body.parentElement.parentElement ? null : null); // no-op guard
   body.innerHTML = `<tr><td colspan="9" class="state-box"><div class="spinner"></div></td></tr>`;
   document.getElementById('pageSubtitle').textContent =
     `${activeSeason} IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%`;
