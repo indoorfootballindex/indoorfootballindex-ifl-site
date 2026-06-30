@@ -243,29 +243,45 @@ function handleFile(input, type) {
   });
 });
 
-function parseRoster(wb) {
-  // Use Master sheet
-  const ws = wb.Sheets['Master'];
-  if (!ws) throw new Error('No Master sheet found');
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+const TEAM_SHEET_CODES = ['AZ','BAY','FF','GB','IA','JAX','NAZ','NM','ORL','QC','SA','SD','TUC','Tul','VG'];
 
+function parseRoster(wb) {
   const result = [];
-  rows.forEach(row => {
-    const teamCode = (row[0] || '').toString().trim();
-    if (!teamCode || teamCode === 'OFFICIAL IFL ROSTERS') return;
-    result.push({
-      team_code:  teamCode,
-      last_name:  (row[1] || '').toString().trim(),
-      first_name: (row[2] || '').toString().trim(),
-      position:   (row[4] || '').toString().trim(),
-      height:     (row[5] || '').toString().trim(),
-      weight:     (row[6] || '').toString().trim(),
-      college:    (row[7] || '').toString().trim(),
-      level:      (row[8] || '').toString().trim(),
-      status:     (row[9] || '').toString().trim(),
+
+  TEAM_SHEET_CODES.forEach(sheetName => {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) return;
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    const teamCode = sheetName.toUpperCase() === 'TUL' ? 'TUL' : sheetName.toUpperCase();
+
+    // Find header row (contains "LAST" or "JERSEY")
+    let headerIdx = -1;
+    for (let i = 0; i < rows.length; i++) {
+      const rowStr = rows[i].join('|').toUpperCase();
+      if (rowStr.includes('LAST') && rowStr.includes('FIRST')) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) return;
+
+    const dataRows = rows.slice(headerIdx + 1);
+    dataRows.forEach(row => {
+      const last = (row[1] || '').toString().trim();
+      if (!last) return;
+      result.push({
+        team_code:  teamCode,
+        last_name:  last,
+        first_name: (row[2] || '').toString().trim(),
+        jersey:     (row[3] !== undefined && row[3] !== '') ? row[3].toString().trim() : '',
+        position:   (row[4] || '').toString().trim(),
+        height:     (row[5] || '').toString().trim(),
+        weight:     (row[6] || '').toString().trim(),
+        college:    (row[7] || '').toString().trim(),
+        level:      (row[8] || '').toString().trim(),
+        status:     (row[9] || '').toString().trim(),
+      });
     });
   });
-  return result.filter(r => r.last_name);
+
+  return result;
 }
 
 function parseTrans(wb) {

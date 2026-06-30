@@ -75,7 +75,13 @@
     .roster-table tr:last-child td { border-bottom: none; }
 
     .player-name { font-weight: 600; color: var(--white); }
-    .jersey { color: var(--muted); font-size: 0.78rem; }
+    .jersey-num {
+      display: inline-block;
+      width: 2.6rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+    }
     .college-cell { color: var(--subtle); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .status-sections { margin-top: 1.5rem; }
@@ -225,7 +231,7 @@ function clearFilters() {
 
 function playerRow(p) {
   return `<tr>
-    <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey || '—'}</span></td>
+    <td><span class="jersey-num">#${p.jersey || '—'}</span> <span class="player-name">${p.first_name} ${p.last_name}</span></td>
     <td>${p.position || '—'}</td>
     <td>${p.height || '—'}</td>
     <td>${p.weight ? p.weight + ' lbs' : '—'}</td>
@@ -323,7 +329,7 @@ function renderByPos(players) {
           </tr></thead>
           <tbody>
             ${sorted.map(p => `<tr>
-              <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey||'—'}</span></td>
+              <td><span class="jersey-num">#${p.jersey||'—'}</span> <span class="player-name">${p.first_name} ${p.last_name}</span></td>
               <td style="color:var(--gold);font-size:0.78rem;font-weight:700">${p.team_code}</td>
               <td>${p.height||'—'}</td>
               <td>${p.weight ? p.weight+' lbs' : '—'}</td>
@@ -348,7 +354,7 @@ function renderAll(players) {
     </tr></thead>
     <tbody>
       ${sorted.map(p => `<tr>
-        <td><span class="player-name">${p.last_name}, ${p.first_name}</span> <span class="jersey">#${p.jersey||'—'}</span></td>
+        <td><span class="jersey-num">#${p.jersey||'—'}</span> <span class="player-name">${p.first_name} ${p.last_name}</span></td>
         <td style="color:var(--gold);font-size:0.78rem;font-weight:700">${p.team_code}</td>
         <td>${p.position||'—'}</td>
         <td>${p.height||'—'}</td>
