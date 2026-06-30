@@ -180,12 +180,21 @@ export default {
       return json({ transactions: result.results, total: countRes.cnt });
     }
 
-    // GET /api/standings
+    // GET /api/standings?season=2026
     if (path === '/api/standings' && request.method === 'GET') {
+      const season = url.searchParams.get('season') || '2026';
       const standings = await env.DB.prepare(
-        'SELECT * FROM standings ORDER BY conference, win_pct DESC, wins DESC'
-      ).all();
+        'SELECT * FROM standings WHERE season = ? ORDER BY conference, win_pct DESC, wins DESC'
+      ).bind(season).all();
       return json(standings.results);
+    }
+
+    // GET /api/standings/seasons — list of years with data
+    if (path === '/api/standings/seasons' && request.method === 'GET') {
+      const seasons = await env.DB.prepare(
+        'SELECT DISTINCT season FROM standings ORDER BY season DESC'
+      ).all();
+      return json(seasons.results.map(r => r.season));
     }
 
     // GET /api/teams
@@ -287,21 +296,26 @@ export default {
       return json({ ok: true, count: rows.length });
     }
 
-    // POST /api/admin/upload/standings — expects JSON array
+    // POST /api/admin/upload/standings — expects JSON array with optional `season` per row (defaults 2026)
     if (path === '/api/admin/upload/standings' && request.method === 'POST') {
       if (!checkAuth(request, env)) return err('Unauthorized', 401);
 
       const rows = await request.json();
       if (!Array.isArray(rows) || !rows.length) return err('No data');
 
-      await env.DB.prepare('DELETE FROM standings').run();
+      // Only clear out the seasons present in this upload, so other years are untouched
+      const seasons = [...new Set(rows.map(r => parseInt(r.season) || 2026))];
+      for (const s of seasons) {
+        await env.DB.prepare('DELETE FROM standings WHERE season = ?').bind(s).run();
+      }
 
       const stmt = env.DB.prepare(
-        `INSERT INTO standings (team_code, team_name, conference, gp, wins, losses, win_pct, conf_gp, conf_wins, conf_losses, conf_pct, sos, clinched)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO standings (season, team_code, team_name, conference, gp, wins, losses, win_pct, conf_gp, conf_wins, conf_losses, conf_pct, sos, clinched)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
 
       const batch = rows.map(r => stmt.bind(
+        parseInt(r.season) || 2026,
         r.team_code || '',
         r.team_name || '',
         r.conference || '',
@@ -318,7 +332,7 @@ export default {
       ));
 
       await env.DB.batch(batch);
-      return json({ ok: true, count: rows.length });
+      return json({ ok: true, count: rows.length, seasons });
     }
 
     return err('Not found', 404);

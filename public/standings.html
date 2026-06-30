@@ -107,6 +107,30 @@
       color: var(--subtle);
     }
     .legend span { color: var(--gold); font-weight: 700; margin-right: 0.25rem; }
+
+    .standings-header-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .season-select {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 0.45rem 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: 0.03em;
+      outline: none;
+      cursor: pointer;
+      min-width: 110px;
+    }
+    .season-select:focus { border-color: var(--gold); }
   </style>
 </head>
 <body data-page="standings">
@@ -114,8 +138,13 @@
 
 <div class="page">
   <div class="page-header">
-    <h1 class="page-title">Team Standings</h1>
-    <p class="page-subtitle">2026 IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%</p>
+    <div class="standings-header-row">
+      <div>
+        <h1 class="page-title">Team Standings</h1>
+        <p class="page-subtitle" id="pageSubtitle">2026 IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%</p>
+      </div>
+      <select class="season-select" id="seasonSelect"></select>
+    </div>
   </div>
 
   <div class="legend">
@@ -144,12 +173,41 @@
 </div>
 
 <script>
+const CURRENT_SEASON = 2026;
+const EARLIEST_SEASON = 2009;
+let activeSeason = CURRENT_SEASON;
+
+function populateSeasonDropdown(availableSeasons) {
+  const sel = document.getElementById('seasonSelect');
+  sel.innerHTML = '';
+  const available = new Set(availableSeasons.map(s => parseInt(s)));
+
+  for (let y = CURRENT_SEASON; y >= EARLIEST_SEASON; y--) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y + (available.has(y) ? '' : ' (no data)');
+    if (!available.has(y) && y !== CURRENT_SEASON) opt.disabled = true;
+    sel.appendChild(opt);
+  }
+  sel.value = activeSeason;
+
+  sel.addEventListener('change', () => {
+    activeSeason = parseInt(sel.value);
+    loadStandings();
+  });
+}
+
 async function loadStandings() {
   const body = document.getElementById('standingsBody');
+  loading(body.parentElement.parentElement ? null : null); // no-op guard
+  body.innerHTML = `<tr><td colspan="9" class="state-box"><div class="spinner"></div></td></tr>`;
+  document.getElementById('pageSubtitle').textContent =
+    `${activeSeason} IFL Season · Tiebreakers: Record → H2H → Strength of Schedule → Conference Win%`;
+
   try {
-    const standings = await apiFetch('/api/standings');
+    const standings = await apiFetch(`/api/standings?season=${activeSeason}`);
     if (!standings.length) {
-      body.innerHTML = '<tr><td colspan="11"><div class="state-box"><div class="icon">📋</div><p>No standings data yet.</p></div></td></tr>';
+      body.innerHTML = `<tr><td colspan="9"><div class="state-box"><div class="icon">📋</div><p>No standings data for ${activeSeason} yet.</p></div></td></tr>`;
       return;
     }
 
@@ -217,7 +275,17 @@ async function loadStandings() {
   }
 }
 
-loadStandings();
+async function init() {
+  let seasons = [CURRENT_SEASON];
+  try {
+    seasons = await apiFetch('/api/standings/seasons');
+    if (!seasons.length) seasons = [CURRENT_SEASON];
+  } catch (e) { console.error(e); }
+  populateSeasonDropdown(seasons);
+  loadStandings();
+}
+
+init();
 </script>
 </body>
 </html>

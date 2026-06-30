@@ -44,6 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_trans_type ON transactions(trans_type);
 
 CREATE TABLE IF NOT EXISTS standings (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  season      INTEGER NOT NULL DEFAULT 2026,
   team_code   TEXT NOT NULL,
   team_name   TEXT NOT NULL,
   conference  TEXT NOT NULL,
@@ -59,3 +60,5 @@ CREATE TABLE IF NOT EXISTS standings (
   clinched    TEXT DEFAULT '',
   updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_standings_season ON standings(season);
