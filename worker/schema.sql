@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS standings (
   sos         REAL DEFAULT 0,
   clinched    TEXT DEFAULT '',
   result      TEXT DEFAULT '',
+  playoff_wins   INTEGER DEFAULT 0,
+  playoff_losses INTEGER DEFAULT 0,
   updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

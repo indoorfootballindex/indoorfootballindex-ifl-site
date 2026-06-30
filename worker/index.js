@@ -310,8 +310,8 @@ export default {
       }
 
       const stmt = env.DB.prepare(
-        `INSERT INTO standings (season, team_code, team_name, conference, gp, wins, losses, win_pct, conf_gp, conf_wins, conf_losses, conf_pct, sos, clinched, result)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        `INSERT INTO standings (season, team_code, team_name, conference, gp, wins, losses, win_pct, conf_gp, conf_wins, conf_losses, conf_pct, sos, clinched, result, playoff_wins, playoff_losses)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       );
 
       const batch = rows.map(r => stmt.bind(
@@ -329,7 +329,9 @@ export default {
         parseFloat(r.conf_pct) || 0,
         parseFloat(r.sos) || 0,
         r.clinched || '',
-        r.result || ''
+        r.result || '',
+        parseInt(r.playoff_wins) || 0,
+        parseInt(r.playoff_losses) || 0
       ));
 
       await env.DB.batch(batch);

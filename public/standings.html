@@ -270,27 +270,32 @@ async function loadStandings() {
         });
       });
     } else {
-      // Simplified historical view: overall record + playoff result
+      // Simplified historical view: overall record + playoff record + result
       html += `<tr>
         <th data-col="team_name" style="text-align:left">Team</th>
         <th data-col="gp">GP</th>
         <th data-col="wins">W</th>
         <th data-col="losses">L</th>
         <th data-col="win_pct">PCT</th>
+        <th>Playoffs</th>
         <th style="text-align:left">Result</th>
       </tr>`;
 
       Object.entries(byConf).forEach(([conf, teams]) => {
         if (conf && conf !== 'IFL') {
-          html += `<tr class="conf-row"><td colspan="6">${conf}</td></tr>`;
+          html += `<tr class="conf-row"><td colspan="7">${conf}</td></tr>`;
         }
         teams.forEach(t => {
+          const pw = +t.playoff_wins || 0;
+          const pl = +t.playoff_losses || 0;
+          const playoffRecord = (pw > 0 || pl > 0) ? `${pw}-${pl}` : '—';
           html += `<tr>
             <td><div class="team-cell"><span class="team-name-cell">${t.team_name}</span></div></td>
             <td>${t.gp}</td>
             <td>${t.wins}</td>
             <td>${t.losses}</td>
             <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
+            <td>${playoffRecord}</td>
             <td class="result-cell">${t.result || '—'}</td>
           </tr>`;
         });
