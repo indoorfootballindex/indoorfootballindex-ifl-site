@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS standings (
   conf_pct    REAL DEFAULT 0,
   sos         REAL DEFAULT 0,
   clinched    TEXT DEFAULT '',
+  result      TEXT DEFAULT '',
   updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 

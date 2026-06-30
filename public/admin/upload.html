@@ -201,13 +201,12 @@
   <div class="schema-note">
     <h3>Standings CSV Format</h3>
     <code>
-<span class="col">season</span>	<span class="col">team_code</span>	<span class="col">team_name</span>	<span class="col">conference</span>	<span class="col">gp</span>	<span class="col">wins</span>	<span class="col">losses</span>	<span class="col">win_pct</span>	<span class="col">conf_gp</span>	<span class="col">conf_wins</span>	<span class="col">conf_losses</span>	<span class="col">conf_pct</span>	<span class="col">sos</span>	<span class="col">clinched</span>
-2026	AZ	Arizona Rattlers	Western	13	8	5	0.615	10	7	3	0.700	0.481	X
-2026	GB	Green Bay Blizzard	Eastern	13	11	2	0.846	11	9	2	0.818	0.503	X
-2009	TBL	Tampa Bay Storm	—	16	14	2	0.875	—	—	—	—	—	X
+<span class="col">season</span>	<span class="col">team_code</span>	<span class="col">team_name</span>	<span class="col">conference</span>	<span class="col">gp</span>	<span class="col">wins</span>	<span class="col">losses</span>	<span class="col">win_pct</span>	<span class="col">conf_gp</span>	<span class="col">conf_wins</span>	<span class="col">conf_losses</span>	<span class="col">conf_pct</span>	<span class="col">sos</span>	<span class="col">clinched</span>	<span class="col">result</span>
+2026	AZ	Arizona Rattlers	Western	13	8	5	0.615	10	7	3	0.700	0.481	X	
+2009	TBL	Tampa Bay Storm	—	16	14	2	0.875	0	0	0	0	0		Won United Bowl (RiverCity) 71-62
     </code>
     <p style="color:var(--subtle);font-size:0.78rem;margin-top:0.6rem;line-height:1.5">
-      Include a <strong style="color:var(--text)">season</strong> column with the year. You can mix multiple years in one file — uploading only replaces the years present in your file; other years stay untouched. If omitted, season defaults to 2026.
+      Include a <strong style="color:var(--text)">season</strong> column with the year. You can mix multiple years in one file — uploading only replaces the years present in your file; other years stay untouched. If omitted, season defaults to 2026. The <strong style="color:var(--text)">result</strong> column (playoff outcome text) is optional and shows on historical seasons that don't have conference/SOS data.
     </p>
   </div>
 </div>
@@ -354,6 +353,7 @@ function parseStandings(wb) {
     conf_pct:     r.conf_pct,
     sos:          r.sos,
     clinched:     (r.clinched || '').toString().trim(),
+    result:       (r.result || '').toString().trim(),
   })).filter(r => r.team_code);
 }
 

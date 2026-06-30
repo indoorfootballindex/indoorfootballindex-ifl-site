@@ -67,6 +67,7 @@
 
     .pct-cell { font-weight: 700; color: var(--text); }
     .clinch { font-size: 0.7rem; color: var(--gold); margin-left: 0.3rem; font-weight: 600; }
+    .result-cell { color: var(--subtle); font-size: 0.8rem; text-align: left !important; white-space: normal; }
 
     .sos-cell { white-space: nowrap; }
     .sos-bar-wrap { display: flex; align-items: center; gap: 0.4rem; }
@@ -269,18 +270,19 @@ async function loadStandings() {
         });
       });
     } else {
-      // Simplified historical view: just overall record
+      // Simplified historical view: overall record + playoff result
       html += `<tr>
         <th data-col="team_name" style="text-align:left">Team</th>
         <th data-col="gp">GP</th>
         <th data-col="wins">W</th>
         <th data-col="losses">L</th>
         <th data-col="win_pct">PCT</th>
+        <th style="text-align:left">Result</th>
       </tr>`;
 
       Object.entries(byConf).forEach(([conf, teams]) => {
         if (conf && conf !== 'IFL') {
-          html += `<tr class="conf-row"><td colspan="5">${conf}</td></tr>`;
+          html += `<tr class="conf-row"><td colspan="6">${conf}</td></tr>`;
         }
         teams.forEach(t => {
           html += `<tr>
@@ -289,6 +291,7 @@ async function loadStandings() {
             <td>${t.wins}</td>
             <td>${t.losses}</td>
             <td class="pct-cell">${(+t.win_pct).toFixed(3)}</td>
+            <td class="result-cell">${t.result || '—'}</td>
           </tr>`;
         });
       });
