@@ -5,7 +5,7 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "ifl-site-db"
-database_id = "ce22d01d-6c99-481c-9806-2e6df2abea57"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
 
 [vars]
 # Set ADMIN_SECRET via: npx wrangler secret put ADMIN_SECRET

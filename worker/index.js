@@ -18,38 +18,86 @@ function err(msg, status = 400) {
   return json({ error: msg }, status);
 }
 
-// ── Status normalizer ──────────────────────────────────────────────────────
-function normalizeStatus(raw) {
-  if (!raw) return 'Active';
-  const s = raw.toString().trim().toLowerCase();
-  if (s.includes('exempt') && s.includes('cfl')) return 'Exempt – CFL';
-  if (s.includes('exempt') && s.includes('ufl')) return 'Exempt – UFL';
-  if (s.includes('exempt') && s.includes('nfl')) return 'Exempt – NFL';
-  if (s.includes('short term ir') || s === 'ir') return 'Short-Term IR';
-  if (s.includes('season ir')) return 'Season IR';
-  if (s.includes('league ir')) return 'League IR';
-  if (s.includes('commissioner')) return 'Commissioners Exempt';
-  if (s.includes('suspended') || s.includes('suspension')) return 'Suspended';
-  if (s.includes('pup')) return 'PUP';
-  if (s.includes('rtr')) return 'RTR';
-  if (s.includes('retired')) return 'Retired';
-  if (s.includes('active')) return 'Active';
+// ── Fuzzy typo-tolerant matching ───────────────────────────────────────────
+// Levenshtein distance for catching typos like "Relaase", "Acitve", "Suspeneded"
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+const STATUS_CANON = [
+  { value: 'Active',                key: 'active' },
+  { value: 'RTR',                   key: 'rtr' },
+  { value: 'PUP',                   key: 'pup' },
+  { value: 'Short-Term IR',         key: 'shorttermir' },
+  { value: 'Season IR',             key: 'seasonir' },
+  { value: 'League IR',             key: 'leagueir' },
+  { value: 'Exempt – CFL',          key: 'exemptcfl' },
+  { value: 'Exempt – UFL',          key: 'exemptufl' },
+  { value: 'Exempt – NFL',          key: 'exemptnfl' },
+  { value: "Commissioners Exempt",  key: 'commissionersexempt' },
+  { value: 'Suspended',             key: 'suspended' },
+  { value: 'Retired',               key: 'retired' },
+];
+
+const TRANS_CANON = [
+  { value: 'Sign',           key: 'sign' },
+  { value: 'Release',        key: 'release' },
+  { value: 'RTR',            key: 'rtr' },
+  { value: 'Short-Term IR',  key: 'shorttermir' },
+  { value: 'Season IR',      key: 'seasonir' },
+  { value: 'Exempt – CFL',   key: 'exemptcfl' },
+  { value: 'Exempt – UFL',   key: 'exemptufl' },
+  { value: 'Exempt – NFL',   key: 'exemptnfl' },
+  { value: 'Suspended',      key: 'suspended' },
+  { value: 'Retired',        key: 'retired' },
+];
+
+function fuzzyMatch(raw, canonList, maxDist = 2) {
+  if (!raw) return canonList[0].value;
+  const cleaned = raw.toString().trim().toLowerCase().replace(/[^a-z]/g, '');
+  if (!cleaned) return raw.toString().trim();
+
+  for (const c of canonList) {
+    if (cleaned === c.key) return c.value;
+  }
+  for (const c of canonList) {
+    if (cleaned.includes(c.key) || c.key.includes(cleaned)) return c.value;
+  }
+  let best = null, bestDist = Infinity;
+  for (const c of canonList) {
+    const d = levenshtein(cleaned, c.key);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  if (best && bestDist <= Math.max(maxDist, Math.floor(best.key.length * 0.3))) {
+    return best.value;
+  }
   return raw.toString().trim();
 }
 
+function normalizeStatus(raw) {
+  return fuzzyMatch(raw, STATUS_CANON);
+}
+
 function normalizeTransType(raw) {
-  if (!raw) return raw;
-  const s = raw.toString().trim().toLowerCase();
-  if (s.includes('rtr')) return 'RTR';
-  if (s.includes('release')) return 'Release';
-  if (s.includes('sign')) return 'Sign';
-  if (s.includes('short term ir')) return 'Short-Term IR';
-  if (s.includes('season ir')) return 'Season IR';
-  if (s.includes('exempt') && s.includes('cfl')) return 'Exempt – CFL';
-  if (s.includes('exempt') && s.includes('ufl')) return 'Exempt – UFL';
-  if (s.includes('exempt') && s.includes('nfl')) return 'Exempt – NFL';
-  if (s.includes('suspend')) return 'Suspended';
-  return raw.toString().trim();
+  return fuzzyMatch(raw, TRANS_CANON);
+}
+
+function titleCase(str) {
+  if (!str) return '';
+  return str.toString().trim().split(/\s+/).map(w =>
+    w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(' ');
 }
 
 // ── CSV parser (simple, handles quoted fields) ─────────────────────────────
@@ -193,8 +241,8 @@ export default {
       const batch = rows.map(r => stmt.bind(
         r.team_code || '',
         TEAM_NAMES[r.team_code] || r.team_code || '',
-        r.last_name || '',
-        r.first_name || '',
+        titleCase(r.last_name),
+        titleCase(r.first_name),
         r.jersey || '',
         r.position || '',
         r.height || '',
@@ -223,8 +271,8 @@ export default {
 
       const batch = rows.map(r => stmt.bind(
         r.team_name || '',
-        r.last_name || '',
-        r.first_name || '',
+        titleCase(r.last_name),
+        titleCase(r.first_name),
         r.jersey || '',
         r.position || '',
         r.height || '',
